@@ -20,7 +20,7 @@ interface ItemsTableProps {
   }>;
 }
 
-export function ItemsTable({ items }: ItemsTableProps) {
+export function ItemsTableEnhanced({ items }: ItemsTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
