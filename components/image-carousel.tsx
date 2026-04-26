@@ -46,7 +46,16 @@ export function ImageCarousel({ images, itemId }: ImageCarouselProps) {
     );
   }
 
-  const currentImage = images[currentIndex];
+  const safeIndex = Math.min(currentIndex, images.length - 1);
+  const currentImage = images[safeIndex];
+
+  if (!currentImage) {
+    return (
+      <div className="w-full h-48 bg-gray-100 border border-gray-300 rounded flex items-center justify-center text-gray-500">
+        No images
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
