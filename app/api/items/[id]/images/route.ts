@@ -3,10 +3,15 @@ import { sql } from '@vercel/postgres';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
+    const { id: rawId } = await params;
+    const id = Number.parseInt(rawId, 10);
+    if (!Number.isInteger(id)) {
+      return NextResponse.json({ error: 'Invalid item ID' }, { status: 400 });
+    }
+
     const result = await sql`
       SELECT * FROM item_images WHERE item_id = ${id} ORDER BY created_at ASC
     `;
@@ -19,14 +24,18 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { url } = await request.json();
-    const id = params.id;
+    const { id: rawId } = await params;
+    const id = Number.parseInt(rawId, 10);
 
     if (!url) {
       return NextResponse.json({ error: 'No URL provided' }, { status: 400 });
+    }
+    if (!Number.isInteger(id)) {
+      return NextResponse.json({ error: 'Invalid item ID' }, { status: 400 });
     }
 
     const result = await sql`
@@ -44,7 +53,7 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { imageId } = await request.json();

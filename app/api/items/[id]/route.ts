@@ -3,14 +3,18 @@ import { sql } from '@vercel/postgres';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { status } = await request.json();
-    const id = params.id;
+    const { id: rawId } = await params;
+    const id = Number.parseInt(rawId, 10);
 
     if (!['bought', 'in_inventory', 'sold'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    }
+    if (!Number.isInteger(id)) {
+      return NextResponse.json({ error: 'Invalid item ID' }, { status: 400 });
     }
 
     const result = await sql`
@@ -33,10 +37,14 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
+    const { id: rawId } = await params;
+    const id = Number.parseInt(rawId, 10);
+    if (!Number.isInteger(id)) {
+      return NextResponse.json({ error: 'Invalid item ID' }, { status: 400 });
+    }
 
     const result = await sql`
       DELETE FROM items WHERE id = ${id} RETURNING id
