@@ -17,13 +17,13 @@ export async function POST(request: NextRequest) {
   try {
     const { name, price_bought, price_selling, image_url } = await request.json();
 
-    if (!name || price_bought === undefined || price_selling === undefined) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!name) {
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
     const result = await sql`
       INSERT INTO items (name, price_bought, price_selling, image_url)
-      VALUES (${name}, ${price_bought}, ${price_selling}, ${image_url || null})
+      VALUES (${name}, ${price_bought ?? 0}, ${price_selling ?? 0}, ${image_url || null})
       RETURNING *
     `;
 

@@ -67,9 +67,9 @@ export function ItemForm({ onSuccess, onCancel }: ItemFormProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
-          price_bought: parseFloat(formData.price_bought),
-          price_selling: parseFloat(formData.price_selling),
+          name: formData.name,
+          price_bought: formData.price_bought ? parseFloat(formData.price_bought) : null,
+          price_selling: formData.price_selling ? parseFloat(formData.price_selling) : null,
           image_url: imageUrls[0] || null,
         }),
       });
@@ -172,14 +172,13 @@ export function ItemForm({ onSuccess, onCancel }: ItemFormProps) {
         {/* Price Bought */}
         <div>
           <label className="block text-sm font-medium text-black mb-2">
-            Price Bought ($)
+            Price Bought ($) <span className="text-gray-400 font-normal">optional</span>
           </label>
           <input
             type="number"
             step="0.01"
             value={formData.price_bought}
             onChange={(e) => setFormData({ ...formData, price_bought: e.target.value })}
-            required
             className="w-full px-3 py-2 border border-black rounded text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-0"
             placeholder="0.00"
           />
@@ -188,14 +187,13 @@ export function ItemForm({ onSuccess, onCancel }: ItemFormProps) {
         {/* Price Selling */}
         <div>
           <label className="block text-sm font-medium text-black mb-2">
-            Price Selling ($)
+            Price Selling ($) <span className="text-gray-400 font-normal">optional</span>
           </label>
           <input
             type="number"
             step="0.01"
             value={formData.price_selling}
             onChange={(e) => setFormData({ ...formData, price_selling: e.target.value })}
-            required
             className="w-full px-3 py-2 border border-black rounded text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-0"
             placeholder="0.00"
           />

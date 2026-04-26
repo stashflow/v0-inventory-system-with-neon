@@ -93,15 +93,25 @@ export function ItemsTableEnhanced({ items }: ItemsTableProps) {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-black truncate">{item.name}</h3>
                   <div className="text-sm text-gray-600 mt-1">
-                    ${item.price_bought.toFixed(2)} → ${item.price_selling.toFixed(2)}
+                    {item.price_bought > 0 || item.price_selling > 0 ? (
+                      <>
+                        {item.price_bought > 0 ? `$${item.price_bought.toFixed(2)}` : '-'}
+                        {' → '}
+                        {item.price_selling > 0 ? `$${item.price_selling.toFixed(2)}` : '-'}
+                      </>
+                    ) : (
+                      <span className="text-gray-400">No prices set</span>
+                    )}
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className={`text-sm font-medium ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {profit >= 0 ? '+' : ''}${profit.toFixed(2)}
-                </div>
+                {(item.price_bought > 0 || item.price_selling > 0) && (
+                  <div className={`text-sm font-medium ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {profit >= 0 ? '+' : ''}${profit.toFixed(2)}
+                  </div>
+                )}
                 <StatusBadge status={item.status} />
                 {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
               </div>
