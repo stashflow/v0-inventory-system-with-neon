@@ -76,8 +76,10 @@ export function ItemsTableEnhanced({ items }: ItemsTableProps) {
   return (
     <div className="space-y-2">
       {items.map((item) => {
+        const priceBought = Number(item.price_bought || 0);
+        const priceSelling = Number(item.price_selling || 0);
         const expenses = Number(item.total_expenses || 0);
-        const profit = item.price_selling - item.price_bought - expenses;
+        const profit = priceSelling - priceBought - expenses;
         const isExpanded = expandedId === item.id;
 
         return (
@@ -98,11 +100,11 @@ export function ItemsTableEnhanced({ items }: ItemsTableProps) {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-black truncate">{item.name}</h3>
                   <div className="text-sm text-gray-600 mt-1">
-                    {item.price_bought > 0 || item.price_selling > 0 ? (
+                    {priceBought > 0 || priceSelling > 0 ? (
                       <>
-                        {item.price_bought > 0 ? `$${item.price_bought.toFixed(2)}` : '-'}
+                        {priceBought > 0 ? `$${priceBought.toFixed(2)}` : '-'}
                         {' → '}
-                        {item.price_selling > 0 ? `$${item.price_selling.toFixed(2)}` : '-'}
+                        {priceSelling > 0 ? `$${priceSelling.toFixed(2)}` : '-'}
                         {expenses > 0 && <> · Fees ${expenses.toFixed(2)}</>}
                       </>
                     ) : (
@@ -113,7 +115,7 @@ export function ItemsTableEnhanced({ items }: ItemsTableProps) {
               </div>
 
               <div className="flex items-center gap-3">
-                {(item.price_bought > 0 || item.price_selling > 0) && (
+                {(priceBought > 0 || priceSelling > 0) && (
                   <div className={`text-sm font-medium ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {profit >= 0 ? '+' : ''}${profit.toFixed(2)}
                   </div>

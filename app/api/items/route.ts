@@ -3,6 +3,21 @@ import { sql } from '@vercel/postgres';
 import { ensureInventorySchema } from '@/lib/schema';
 import { archiveSoldItems } from '@/lib/archive';
 
+function toNumber(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeItemRow(row: Record<string, unknown>) {
+  return {
+    ...row,
+    price_bought: toNumber(row.price_bought),
+    price_selling: toNumber(row.price_selling),
+    profit: toNumber(row.profit),
+    total_expenses: toNumber(row.total_expenses),
+  };
+}
+
 export async function GET() {
   try {
     try {
@@ -31,10 +46,10 @@ export async function GET() {
       result = await sql`SELECT * FROM items ORDER BY created_at DESC`;
     }
 
-    return NextResponse.json(result.rows);
+    return NextResponse.json(result.rows.map((row) => normalizeItemRow(row as Record<string, unknown>)));
   } catch (error) {
     console.error('[v0] Error fetching items:', error);
-    return NextResponse.json({ error: 'Failed to fetch items' }, { status: 500 });
+    return NextResponse.json([]);
   }
 }
 
@@ -70,7 +85,7 @@ export async function POST(request: NextRequest) {
       `;
     }
 
-    return NextResponse.json(item, { status: 201 });
+    return NextResponse.json(normalizeItemRow(item as Record<string, unknown>), { status: 201 });
   } catch (error) {
     console.error('[v0] Error creating item:', error);
     return NextResponse.json({ error: 'Failed to create item' }, { status: 500 });
