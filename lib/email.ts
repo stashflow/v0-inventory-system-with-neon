@@ -10,6 +10,18 @@ const EMAIL_USER = process.env.SMTP_USER || 'hello@ambrossslides.com';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'hello@ambrossslides.com';
 const EMAIL_TO = process.env.EMAIL_TO || 'ejmeade22@gmail.com';
 
+export function getEmailConfigSummary() {
+  return {
+    host: EMAIL_HOST,
+    port: EMAIL_PORT,
+    secure: EMAIL_SECURE,
+    user: EMAIL_USER,
+    from: EMAIL_FROM,
+    to: EMAIL_TO,
+    hasPassword: Boolean(process.env.SMTP_PASS),
+  };
+}
+
 function formatMoney(value: number): string {
   return `$${value.toFixed(2)}`;
 }
@@ -40,6 +52,8 @@ async function sendEmail(subject: string, text: string, html: string): Promise<E
       },
     });
 
+    await transporter.verify();
+
     await transporter.sendMail({
       from: EMAIL_FROM,
       to: EMAIL_TO,
@@ -50,8 +64,12 @@ async function sendEmail(subject: string, text: string, html: string): Promise<E
 
     return { ok: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown email error';
-    return { ok: false, error: message };
+    const maybeError = error as { message?: string; code?: string; response?: string; command?: string };
+    const message = maybeError?.message || 'Unknown email error';
+    const details = [maybeError?.code, maybeError?.command, maybeError?.response]
+      .filter(Boolean)
+      .join(' | ');
+    return { ok: false, error: details ? `${message} (${details})` : message };
   }
 }
 
@@ -130,6 +148,28 @@ export async function sendMonthlyStatementEmail(input: {
             .join('')}</ul>`
         : '<p>No sold items this month.</p>'
     }
+  `;
+
+  return sendEmail(subject, text, html);
+}
+
+export async function sendTestEmail(): Promise<EmailResult> {
+  const now = new Date();
+  const subject = `Inventory Test Email - ${now.toLocaleString('en-US')}`;
+  const text = [
+    'This is a test email from your inventory app.',
+    '',
+    `Sent at: ${now.toISOString()}`,
+    `From: ${EMAIL_FROM}`,
+    `To: ${EMAIL_TO}`,
+  ].join('\n');
+
+  const html = `
+    <h2>Inventory Test Email</h2>
+    <p>This is a test email from your inventory app.</p>
+    <p><strong>Sent at:</strong> ${htmlEscape(now.toISOString())}</p>
+    <p><strong>From:</strong> ${htmlEscape(EMAIL_FROM)}</p>
+    <p><strong>To:</strong> ${htmlEscape(EMAIL_TO)}</p>
   `;
 
   return sendEmail(subject, text, html);
