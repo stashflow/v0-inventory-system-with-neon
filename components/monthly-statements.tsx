@@ -1,19 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import useSWR from 'swr';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { StatusBadge } from './status-badge';
+import { ChevronLeft, ChevronRight, Mail } from 'lucide-react';
+
+const fetcher = async (url: string) => {
+  const response = await fetch(url);
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error((data && data.error) || `Request failed: ${response.status}`);
+  }
+  return data;
+};
 
 export function MonthlyStatements() {
   const [date, setDate] = useState(() => {
     const today = new Date();
     return { month: today.getMonth() + 1, year: today.getFullYear() };
   });
+  const [sendingEmail, setSendingEmail] = useState(false);
 
-  const { data: stats } = useSWR(
+  const { data: stats, error } = useSWR(
     `/api/statements?month=${date.month}&year=${date.year}`,
-    (url) => fetch(url).then((r) => r.json())
+    fetcher
   );
 
   const handlePrevMonth = () => {
@@ -37,6 +46,29 @@ export function MonthlyStatements() {
     year: 'numeric',
   });
 
+  const handleEmailStatement = async () => {
+    setSendingEmail(true);
+    try {
+      const response = await fetch('/api/statements/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month: date.month, year: date.year }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to email statement');
+      }
+
+      alert(`Statement emailed for ${monthName}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to email statement';
+      alert(message);
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Month Selector */}
@@ -45,12 +77,24 @@ export function MonthlyStatements() {
           <ChevronLeft size={24} />
         </button>
         <h2 className="text-2xl font-bold text-black">{monthName}</h2>
-        <button onClick={handleNextMonth} className="p-2 hover:bg-gray-100 rounded transition-colors">
-          <ChevronRight size={24} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleEmailStatement}
+            disabled={sendingEmail}
+            className="px-3 py-2 border border-black rounded text-sm font-medium text-black hover:bg-gray-100 disabled:opacity-50 transition-colors flex items-center gap-2"
+          >
+            <Mail size={16} />
+            {sendingEmail ? 'Sending...' : 'Email Statement'}
+          </button>
+          <button onClick={handleNextMonth} className="p-2 hover:bg-gray-100 rounded transition-colors">
+            <ChevronRight size={24} />
+          </button>
+        </div>
       </div>
 
-      {stats ? (
+      {error ? (
+        <div className="text-center py-8 text-red-600">Failed to load statement: {error.message}</div>
+      ) : stats ? (
         <>
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

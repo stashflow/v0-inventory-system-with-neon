@@ -14,8 +14,12 @@ interface ItemsTableProps {
     name: string;
     price_bought: number;
     price_selling: number;
+    total_expenses?: number;
     status: string;
     image_url: string | null;
+    date_bought?: string | null;
+    date_listed?: string | null;
+    date_sold?: string | null;
     created_at: string;
   }>;
 }
@@ -72,7 +76,8 @@ export function ItemsTableEnhanced({ items }: ItemsTableProps) {
   return (
     <div className="space-y-2">
       {items.map((item) => {
-        const profit = item.price_selling - item.price_bought;
+        const expenses = Number(item.total_expenses || 0);
+        const profit = item.price_selling - item.price_bought - expenses;
         const isExpanded = expandedId === item.id;
 
         return (
@@ -98,6 +103,7 @@ export function ItemsTableEnhanced({ items }: ItemsTableProps) {
                         {item.price_bought > 0 ? `$${item.price_bought.toFixed(2)}` : '-'}
                         {' → '}
                         {item.price_selling > 0 ? `$${item.price_selling.toFixed(2)}` : '-'}
+                        {expenses > 0 && <> · Fees ${expenses.toFixed(2)}</>}
                       </>
                     ) : (
                       <span className="text-gray-400">No prices set</span>
@@ -150,6 +156,21 @@ export function ItemsTableEnhanced({ items }: ItemsTableProps) {
                   >
                     Delete
                   </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-gray-600">
+                  <div>
+                    <span className="font-medium text-black">Bought:</span>{' '}
+                    {item.date_bought ? new Date(item.date_bought).toLocaleDateString() : '—'}
+                  </div>
+                  <div>
+                    <span className="font-medium text-black">Listed:</span>{' '}
+                    {item.date_listed ? new Date(item.date_listed).toLocaleDateString() : '—'}
+                  </div>
+                  <div>
+                    <span className="font-medium text-black">Sold:</span>{' '}
+                    {item.date_sold ? new Date(item.date_sold).toLocaleDateString() : '—'}
+                  </div>
                 </div>
               </div>
             )}

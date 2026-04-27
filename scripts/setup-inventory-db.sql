@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS items (
   price_selling DECIMAL(10, 2) NOT NULL,
   status VARCHAR(50) NOT NULL DEFAULT 'bought',
   image_url TEXT,
+  date_bought TIMESTAMP,
+  date_listed TIMESTAMP,
+  date_sold TIMESTAMP,
   profit DECIMAL(10, 2) GENERATED ALWAYS AS (price_selling - price_bought) STORED,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

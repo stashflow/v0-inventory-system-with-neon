@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { mutate } from 'swr';
 import { X } from 'lucide-react';
 
@@ -14,12 +14,35 @@ export function ItemForm({ onSuccess, onCancel }: ItemFormProps) {
     name: '',
     price_bought: '',
     price_selling: '',
+    date_bought: new Date().toISOString().split('T')[0],
+    expense_amount: '',
+    expense_note: '',
   });
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [listings, setListings] = useState<Array<{ platform: string; url: string }>>([]);
+  const [templateName, setTemplateName] = useState('');
+  const [templates, setTemplates] = useState<Array<{ id: string; name: string; listings: Array<{ platform: string; url: string }> }>>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('listing_templates');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setTemplates(parsed);
+      }
+    } catch (error) {
+      console.error('[v0] Failed to load listing templates:', error);
+    }
+  }, []);
+
+  const persistTemplates = (nextTemplates: Array<{ id: string; name: string; listings: Array<{ platform: string; url: string }> }>) => {
+    setTemplates(nextTemplates);
+    localStorage.setItem('listing_templates', JSON.stringify(nextTemplates));
+  };
 
   const handleImageUpload = async (file: File) => {
     setUploading(true);
@@ -58,6 +81,44 @@ export function ItemForm({ onSuccess, onCancel }: ItemFormProps) {
     setListings(newListings);
   };
 
+  const handleSaveTemplate = () => {
+    const cleanName = templateName.trim();
+    const usableListings = listings.filter((listing) => listing.url.trim());
+
+    if (!cleanName) {
+      alert('Enter a template name first');
+      return;
+    }
+    if (usableListings.length === 0) {
+      alert('Add at least one listing URL before saving a template');
+      return;
+    }
+
+    const nextTemplates = [
+      ...templates.filter((template) => template.name.toLowerCase() !== cleanName.toLowerCase()),
+      {
+        id: `${Date.now()}`,
+        name: cleanName,
+        listings: usableListings.map((listing) => ({
+          platform: listing.platform,
+          url: listing.url,
+        })),
+      },
+    ];
+    persistTemplates(nextTemplates);
+    setTemplateName('');
+  };
+
+  const handleApplyTemplate = (templateId: string) => {
+    const template = templates.find((entry) => entry.id === templateId);
+    if (!template) return;
+    setListings(template.listings.map((listing) => ({ ...listing })));
+  };
+
+  const handleDeleteTemplate = (templateId: string) => {
+    persistTemplates(templates.filter((template) => template.id !== templateId));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -71,6 +132,9 @@ export function ItemForm({ onSuccess, onCancel }: ItemFormProps) {
           price_bought: formData.price_bought ? parseFloat(formData.price_bought) : null,
           price_selling: formData.price_selling ? parseFloat(formData.price_selling) : null,
           image_url: imageUrls[0] || null,
+          date_bought: formData.date_bought || null,
+          expense_amount: formData.expense_amount ? parseFloat(formData.expense_amount) : null,
+          expense_note: formData.expense_note || null,
         }),
       });
 
@@ -97,7 +161,14 @@ export function ItemForm({ onSuccess, onCancel }: ItemFormProps) {
         }
       }
 
-      setFormData({ name: '', price_bought: '', price_selling: '' });
+      setFormData({
+        name: '',
+        price_bought: '',
+        price_selling: '',
+        date_bought: new Date().toISOString().split('T')[0],
+        expense_amount: '',
+        expense_note: '',
+      });
       setImageUrls([]);
       setListings([]);
       mutate('/api/items');
@@ -184,6 +255,19 @@ export function ItemForm({ onSuccess, onCancel }: ItemFormProps) {
           />
         </div>
 
+        {/* Date Bought */}
+        <div>
+          <label className="block text-sm font-medium text-black mb-2">
+            Date Bought
+          </label>
+          <input
+            type="date"
+            value={formData.date_bought}
+            onChange={(e) => setFormData({ ...formData, date_bought: e.target.value })}
+            className="w-full px-3 py-2 border border-black rounded text-black focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-0"
+          />
+        </div>
+
         {/* Price Selling */}
         <div>
           <label className="block text-sm font-medium text-black mb-2">
@@ -199,11 +283,82 @@ export function ItemForm({ onSuccess, onCancel }: ItemFormProps) {
           />
         </div>
 
+        {/* Expenses */}
+        <div>
+          <label className="block text-sm font-medium text-black mb-2">
+            Expense Amount ($) <span className="text-gray-400 font-normal">optional</span>
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            value={formData.expense_amount}
+            onChange={(e) => setFormData({ ...formData, expense_amount: e.target.value })}
+            className="w-full px-3 py-2 border border-black rounded text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-0"
+            placeholder="Shipping, fees, etc."
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-black mb-2">
+            Expense Note <span className="text-gray-400 font-normal">optional</span>
+          </label>
+          <input
+            type="text"
+            value={formData.expense_note}
+            onChange={(e) => setFormData({ ...formData, expense_note: e.target.value })}
+            className="w-full px-3 py-2 border border-black rounded text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-0"
+            placeholder="e.g., eBay fee + shipping label"
+          />
+        </div>
+
         {/* Listing Links */}
         <div>
           <label className="block text-sm font-medium text-black mb-2">
             Listing Links
           </label>
+          <div className="mb-3 space-y-2">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Template name"
+                className="flex-1 px-3 py-2 border border-black rounded text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black"
+              />
+              <button
+                type="button"
+                onClick={handleSaveTemplate}
+                className="px-3 py-2 border border-black rounded text-black hover:bg-gray-100 transition-colors text-sm"
+              >
+                Save Template
+              </button>
+            </div>
+            {templates.length > 0 && (
+              <div className="space-y-2">
+                {templates.map((template) => (
+                  <div key={template.id} className="flex items-center justify-between border border-gray-300 rounded px-3 py-2">
+                    <span className="text-sm text-black">{template.name}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleApplyTemplate(template.id)}
+                        className="px-2 py-1 border border-black rounded text-xs hover:bg-gray-100"
+                      >
+                        Apply
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTemplate(template.id)}
+                        className="px-2 py-1 border border-red-500 text-red-500 rounded text-xs hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="space-y-2">
             {listings.map((listing, idx) => (
               <div key={idx} className="flex gap-2 items-end">
