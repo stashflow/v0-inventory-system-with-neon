@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendMonthlyStatementEmail } from '@/lib/email';
+import { getEmailConfigSummary, sendMonthlyStatementEmail } from '@/lib/email';
 import { getMonthlyStats } from '@/lib/monthly-stats';
 
 export async function POST(request: NextRequest) {
@@ -23,14 +23,22 @@ export async function POST(request: NextRequest) {
 
     if (!result.ok) {
       return NextResponse.json(
-        { error: `Failed to send email: ${result.error}` },
+        {
+          error: `Failed to send email: ${result.error}`,
+          code: result.code || null,
+          hint: result.hint || null,
+          config: getEmailConfigSummary(),
+        },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, config: getEmailConfigSummary() });
   } catch (error) {
     console.error('[v0] Error emailing monthly statement:', error);
-    return NextResponse.json({ error: 'Failed to email statement' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to email statement', config: getEmailConfigSummary() },
+      { status: 500 }
+    );
   }
 }

@@ -57,7 +57,10 @@ export function MonthlyStatements() {
 
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to email statement');
+        const extra = [result.code ? `Code: ${result.code}` : '', result.hint ? `Hint: ${result.hint}` : '']
+          .filter(Boolean)
+          .join('\n');
+        throw new Error(`${result.error || 'Failed to email statement'}${extra ? `\n${extra}` : ''}`);
       }
 
       alert(`Statement emailed for ${monthName}`);

@@ -8,6 +8,8 @@ export async function POST() {
       return NextResponse.json(
         {
           error: `Failed to send test email: ${result.error}`,
+          code: result.code || null,
+          hint: result.hint || null,
           config: getEmailConfigSummary(),
         },
         { status: 500 }

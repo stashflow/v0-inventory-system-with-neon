@@ -1,7 +1,9 @@
 import nodemailer from 'nodemailer';
 import type { MonthlyStats } from './monthly-stats';
 
-type EmailResult = { ok: true } | { ok: false; error: string };
+type EmailResult =
+  | { ok: true }
+  | { ok: false; error: string; code?: string; hint?: string };
 
 const EMAIL_HOST = process.env.SMTP_HOST || 'smtppro.zoho.com';
 const EMAIL_PORT = Number(process.env.SMTP_PORT || 465);
@@ -22,6 +24,88 @@ export function getEmailConfigSummary() {
   };
 }
 
+function validateEmailConfig(): { valid: true } | { valid: false; error: string; hint: string } {
+  if (!process.env.SMTP_PASS) {
+    return {
+      valid: false,
+      error: 'SMTP_PASS is not set',
+      hint: 'Add SMTP_PASS in your deployment environment, then redeploy.',
+    };
+  }
+
+  if (!EMAIL_HOST) {
+    return {
+      valid: false,
+      error: 'SMTP_HOST is not set',
+      hint: 'Set SMTP_HOST to your mail server host.',
+    };
+  }
+
+  if (!Number.isInteger(EMAIL_PORT) || EMAIL_PORT <= 0 || EMAIL_PORT > 65535) {
+    return {
+      valid: false,
+      error: 'SMTP_PORT is invalid',
+      hint: 'Use a valid SMTP port such as 465 (SSL) or 587 (STARTTLS).',
+    };
+  }
+
+  if (!EMAIL_USER.includes('@')) {
+    return {
+      valid: false,
+      error: 'SMTP_USER looks invalid',
+      hint: 'SMTP_USER should be a full mailbox email address.',
+    };
+  }
+
+  if (!EMAIL_FROM.includes('@')) {
+    return {
+      valid: false,
+      error: 'EMAIL_FROM looks invalid',
+      hint: 'EMAIL_FROM should be a full email address.',
+    };
+  }
+
+  if (!EMAIL_TO.includes('@')) {
+    return {
+      valid: false,
+      error: 'EMAIL_TO looks invalid',
+      hint: 'EMAIL_TO should be a valid recipient email address.',
+    };
+  }
+
+  return { valid: true };
+}
+
+function buildEmailHint(code?: string, message?: string): string | undefined {
+  const normalizedMessage = (message || '').toLowerCase();
+
+  if (code === 'EAUTH' || normalizedMessage.includes('invalid login') || normalizedMessage.includes('authentication')) {
+    return 'SMTP auth failed. Use a Zoho app password (not your normal login password) and verify SMTP_USER.';
+  }
+
+  if (code === 'ETIMEDOUT' || code === 'ESOCKET' || normalizedMessage.includes('timed out')) {
+    return 'SMTP connection timed out. Check host/port/secure settings and outbound network access.';
+  }
+
+  if (code === 'ECONNECTION' || normalizedMessage.includes('connection refused')) {
+    return 'Could not connect to SMTP server. Verify SMTP_HOST, SMTP_PORT, and SMTP_SECURE.';
+  }
+
+  if (code === 'ENOTFOUND' || normalizedMessage.includes('getaddrinfo')) {
+    return 'SMTP host could not be resolved. Check SMTP_HOST spelling.';
+  }
+
+  if (normalizedMessage.includes('sender') || normalizedMessage.includes('from')) {
+    return 'Sender address was rejected. Ensure EMAIL_FROM matches an authorized mailbox/domain.';
+  }
+
+  if (normalizedMessage.includes('recipient') || normalizedMessage.includes('to')) {
+    return 'Recipient address was rejected. Verify EMAIL_TO is valid.';
+  }
+
+  return undefined;
+}
+
 function formatMoney(value: number): string {
   return `$${value.toFixed(2)}`;
 }
@@ -36,16 +120,24 @@ function htmlEscape(value: string): string {
 }
 
 async function sendEmail(subject: string, text: string, html: string): Promise<EmailResult> {
-  const password = process.env.SMTP_PASS;
-  if (!password) {
-    return { ok: false, error: 'SMTP_PASS is not set' };
+  const configValidation = validateEmailConfig();
+  if (!configValidation.valid) {
+    return {
+      ok: false,
+      error: configValidation.error,
+      hint: configValidation.hint,
+    };
   }
 
   try {
+    const password = process.env.SMTP_PASS as string;
     const transporter = nodemailer.createTransport({
       host: EMAIL_HOST,
       port: EMAIL_PORT,
       secure: EMAIL_SECURE,
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
       auth: {
         user: EMAIL_USER,
         pass: password,
@@ -64,12 +156,23 @@ async function sendEmail(subject: string, text: string, html: string): Promise<E
 
     return { ok: true };
   } catch (error) {
-    const maybeError = error as { message?: string; code?: string; response?: string; command?: string };
+    const maybeError = error as {
+      message?: string;
+      code?: string;
+      response?: string;
+      command?: string;
+    };
     const message = maybeError?.message || 'Unknown email error';
     const details = [maybeError?.code, maybeError?.command, maybeError?.response]
       .filter(Boolean)
       .join(' | ');
-    return { ok: false, error: details ? `${message} (${details})` : message };
+    const hint = buildEmailHint(maybeError?.code, message);
+    return {
+      ok: false,
+      error: details ? `${message} (${details})` : message,
+      code: maybeError?.code,
+      hint,
+    };
   }
 }
 
