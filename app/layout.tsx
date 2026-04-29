@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Inter, Roboto_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const _inter = Inter({ subsets: ['latin'] });
+const _robotoMono = Roboto_Mono({ subsets: ['latin'] });
 
 export const viewport = {
   width: 'device-width',
@@ -24,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background">
+    <html lang="en" className="bg-white">
       <body className="font-sans antialiased bg-white text-black">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
