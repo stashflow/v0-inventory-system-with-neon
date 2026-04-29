@@ -18,7 +18,6 @@ const fetcher = async (url: string) => {
 
 export function InventoryApp() {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [sendingTestEmail, setSendingTestEmail] = useState(false);
   const [view, setView] = useState<'inventory' | 'statements' | 'archive'>('inventory');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'bought' | 'in_inventory' | 'sold'>('all');
@@ -35,27 +34,6 @@ export function InventoryApp() {
     return searchMatches && statusMatches;
   });
 
-  const handleSendTestEmail = async () => {
-    setSendingTestEmail(true);
-    try {
-      const response = await fetch('/api/email/test', { method: 'POST' });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        const extra = [result.code ? `Code: ${result.code}` : '', result.hint ? `Hint: ${result.hint}` : '']
-          .filter(Boolean)
-          .join('\n');
-        throw new Error(`${result.error || 'Failed to send test email'}${extra ? `\n${extra}` : ''}`);
-      }
-
-      alert('Test email sent');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to send test email';
-      alert(message);
-    } finally {
-      setSendingTestEmail(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -65,21 +43,12 @@ export function InventoryApp() {
             <h1 className="text-3xl font-bold text-black" style={{ fontFamily: 'Proxima Nova, -apple-system, BlinkMacSystemFont, sans-serif' }}>
               inventory
             </h1>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleSendTestEmail}
-                disabled={sendingTestEmail}
-                className="border border-black text-black px-4 py-2 rounded text-sm font-medium hover:bg-gray-100 disabled:opacity-50 transition-colors"
-              >
-                {sendingTestEmail ? 'Sending...' : 'Send Test Email'}
-              </button>
-              <button
-                onClick={() => setIsFormOpen(true)}
-                className="bg-black text-white px-6 py-2 rounded text-sm font-medium hover:bg-gray-800 transition-colors"
-              >
-                Add Item
-              </button>
-            </div>
+            <button
+              onClick={() => setIsFormOpen(true)}
+              className="bg-black text-white px-6 py-2 rounded text-sm font-medium hover:bg-gray-800 transition-colors"
+            >
+              Add Item
+            </button>
           </div>
           
           {/* View Tabs */}
